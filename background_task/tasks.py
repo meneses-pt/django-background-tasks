@@ -17,7 +17,8 @@ from background_task.exceptions import BackgroundTaskError
 from background_task.models import Task
 from background_task.settings import app_settings
 from background_task import signals
-
+from importlib.util import find_spec
+from django.apps import apps
 logger = logging.getLogger(__name__)
 
 
@@ -300,23 +301,18 @@ class TaskProxy(object):
         return 'TaskProxy(%s)' % self.name
 
 tasks = Tasks()
-
-
 def autodiscover():
     """
     Autodiscover tasks.py files in much the same way as admin app
     """
-    import imp
-    from django.conf import settings
-
     for app_config in apps.get_app_configs():
         try:
-            app_path = import_module(app_config.name).__path__
-        except (AttributeError, ImportError):
-            continue
-        try:
-            imp.find_module('tasks', app_path)
-        except ImportError:
-            continue
+            app_path = app_config.module.__path__
+        except AttributeError:
+            continue  # This is to handle modules without a __path__ attribute
+        
+        # Use find_spec to check if the tasks module exists without importing it
+        if find_spec(f"{app_config.name}.tasks"):
+            # If the spec is not None, the module exists, and we can import it
+            import_module(f"{app_config.name}.tasks")
 
-        import_module("%s.tasks" % app_config.name)

@@ -315,6 +315,7 @@ def autodiscover():
         except (AttributeError, ImportError):
             continue
         try:
+            app_path = list(app_path) if app_path else None
             imp.find_module('tasks', app_path)
         except ImportError:
             continue
